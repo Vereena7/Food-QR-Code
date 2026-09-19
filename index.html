@@ -31,7 +31,8 @@
   }
    
   #camWrap::before{content:''; display:block; padding-top:100%;}
-  #reader{position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; overflow:hidden;}
+   
+  #reader{position:absolute !important; top:0; left:0; right:0; bottom:0; width:100%; height:100%; overflow:hidden;}
    
   #reader video{
     width:100% !important; height:100% !important;
@@ -94,6 +95,7 @@
   <div id="resultBanner">وجّه الكاميرا على كود الشخص...</div>
   <button id="nextBtn">➡️ التالي</button>
   <div id="counter">تم تسجيل 0 من بداية فتح الصفحة</div>
+  <div id="buildTag" style="opacity:.35; font-size:11px; margin-top:4px; color:#fff;">نسخة v8</div>
   <div class="toggle-link" id="toggleSetup">إعدادات الاتصال</div>
   <div id="setupBox">
     <div>رابط المشروع: <b id="showUrl"></b></div>
@@ -237,12 +239,60 @@
     };
     const config = { fps: 10, qrbox: qrbox, videoConstraints: videoConstraints };
     const target = cameraId ? cameraId : { facingMode: 'environment' };
-    html5QrCode.start(target, config, onScanSuccess).catch(function(err){
+    html5QrCode.start(target, config, onScanSuccess).then(function(){
+      
+      
+      
+      
+      startFitVideoLoop();
+      window.addEventListener('resize', fitVideoToBox);
+      window.addEventListener('orientationchange', function(){ startFitVideoLoop(); });
+      const v = document.querySelector('#reader video');
+      if (v) {
+        v.addEventListener('loadedmetadata', fitVideoToBox);
+        v.addEventListener('playing', fitVideoToBox);
+        v.addEventListener('resize', fitVideoToBox);
+      }
+      
+      
+      const box = document.getElementById('reader');
+      if (box && window.MutationObserver) {
+        new MutationObserver(fitVideoToBox).observe(box, {
+          childList: true, subtree: true, attributes: true, attributeFilter: ['style']
+        });
+      }
+    }).catch(function(err){
       setBanner('❌ مقدرش أفتح الكاميرا: ' + err, 'err');
     });
   }).catch(function(err){
     setBanner('❌ مقدرش أوصل لكاميرات الجهاز: ' + err, 'err');
   });
+
+  function fitVideoToBox(){
+    const box = document.getElementById('reader');
+    const video = box ? box.querySelector('video') : null;
+    if (!box || !video) return;
+    const w = box.clientWidth, h = box.clientHeight;
+    if (!w || !h) return;
+    const targetW = w + 'px', targetH = h + 'px';
+    
+    
+    if (video.style.width === targetW && video.style.height === targetH
+        && video.style.objectFit === 'cover') {
+      return;
+    }
+    video.style.setProperty('width', targetW, 'important');
+    video.style.setProperty('height', targetH, 'important');
+    video.style.setProperty('object-fit', 'cover', 'important');
+  }
+
+  
+  
+  function startFitVideoLoop(){
+    fitVideoToBox();
+    const delays = [100, 250, 500, 1000, 2000, 3500, 6000];
+    delays.forEach(function(d){ setTimeout(fitVideoToBox, d); });
+  }
 </script>
 </body>
 </html>

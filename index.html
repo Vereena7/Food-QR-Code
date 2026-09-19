@@ -42,6 +42,14 @@
   #resultBanner.warn{background:var(--warn-light); color:var(--warn-dark);}
   #resultBanner.err{background:var(--err-light); color:var(--err-dark);}
 
+  #nextBtn{
+    display:none; width:100%; max-width:440px; margin-top:10px; padding:16px;
+    border:none; border-radius:16px; font-family:'Cairo',system-ui,sans-serif; font-weight:800; font-size:19px;
+    background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; cursor:pointer;
+    box-shadow:0 6px 18px rgba(37,99,235,.4);
+  }
+  #nextBtn:active{transform:translateY(1px);}
+
   #counter{margin-top:12px; font-size:13px; color:#000; font-weight:700;}
   #setupBox{
     width:100%; max-width:440px; margin-top:14px; background:#1e293b; border-radius:14px;
@@ -56,6 +64,7 @@
   <h1>🍽️ استلام الوجبات والآيس كريم</h1>
   <div id="camWrap"><div id="reader"></div></div>
   <div id="resultBanner">وجّه الكاميرا على كود الشخص...</div>
+  <button id="nextBtn">➡️ التالي</button>
   <div id="counter">تم تسجيل 0 من بداية فتح الصفحة</div>
   <div class="toggle-link" id="toggleSetup">إعدادات الاتصال</div>
   <div id="setupBox">
@@ -69,9 +78,11 @@
 
   const banner = document.getElementById('resultBanner');
   const counterEl = document.getElementById('counter');
+  const nextBtn = document.getElementById('nextBtn');
   let successCount = 0;
   let lastId = null, lastTime = 0;
   let busy = false;
+  let awaitingConfirm = false;
 
   document.getElementById('showUrl').textContent = EXEC_URL;
   document.getElementById('toggleSetup').addEventListener('click', () => {
@@ -132,10 +143,27 @@
     return m ? decodeURIComponent(m[1]) : decodedText.trim();
   }
 
+  
+  
+  function showConfirmGate(){
+    awaitingConfirm = true;
+    try { html5QrCode.pause(true); } catch (e) {}
+    nextBtn.style.display = 'block';
+  }
+
+  function goToNext(){
+    awaitingConfirm = false;
+    lastId = null;
+    nextBtn.style.display = 'none';
+    setBanner('وجّه الكاميرا على كود الشخص اللي بعده...', '');
+    try { html5QrCode.resume(); } catch (e) {}
+  }
+  nextBtn.addEventListener('click', goToNext);
+
   function onScanSuccess(decodedText){
+    if (busy || awaitingConfirm) return;
     const id = extractId(decodedText);
     const now = Date.now();
-    if (busy) return;
     if (id === lastId && (now - lastTime) < 4000) return; 
     lastId = id; lastTime = now;
     busy = true;
@@ -150,18 +178,24 @@
           counterEl.textContent = 'تم تسجيل ' + successCount + ' من بداية فتح الصفحة';
           setBanner('✅ ' + res.name + ' — اتسجل', 'ok');
         }
-        beep();
-        if (navigator.vibrate) navigator.vibrate(120);
       } else {
         setBanner('❌ خطأ: ' + ((res && res.error) || 'غير معروف'), 'err');
       }
+      beep();
+      if (navigator.vibrate) navigator.vibrate(120);
+      showConfirmGate();
     });
   }
 
   const html5QrCode = new Html5Qrcode('reader');
   Html5Qrcode.getCameras().then(function(cameras){
     let cameraId = cameras && cameras.length ? cameras[cameras.length - 1].id : null; 
-    const config = { fps: 10 };
+    
+    
+    const videoConstraints = { width: { ideal: 1920 }, height: { ideal: 1920 } };
+    if (cameraId) videoConstraints.deviceId = { exact: cameraId };
+    else videoConstraints.facingMode = 'environment';
+    const config = { fps: 10, videoConstraints: videoConstraints };
     const target = cameraId ? cameraId : { facingMode: 'environment' };
     html5QrCode.start(target, config, onScanSuccess).catch(function(err){
       setBanner('❌ مقدرش أفتح الكاميرا: ' + err, 'err');

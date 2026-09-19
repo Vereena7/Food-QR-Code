@@ -31,6 +31,8 @@
   }
   #reader{width:100%; height:100%;}
   #reader video{object-fit:cover;}
+   
+  #reader > div{border:none !important; box-shadow:none !important; background:transparent !important;}
 
   #resultBanner{
     width:100%; max-width:440px; margin-top:14px; border-radius:16px; padding:16px 18px;
@@ -195,7 +197,15 @@
     const videoConstraints = { width: { ideal: 1920 }, height: { ideal: 1920 } };
     if (cameraId) videoConstraints.deviceId = { exact: cameraId };
     else videoConstraints.facingMode = 'environment';
-    const config = { fps: 10, videoConstraints: videoConstraints };
+    
+    
+    
+    const qrbox = function (viewfinderWidth, viewfinderHeight) {
+      const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+      const size = Math.floor(minEdge * 0.7);
+      return { width: size, height: size };
+    };
+    const config = { fps: 10, qrbox: qrbox, videoConstraints: videoConstraints };
     const target = cameraId ? cameraId : { facingMode: 'environment' };
     html5QrCode.start(target, config, onScanSuccess).catch(function(err){
       setBanner('❌ مقدرش أفتح الكاميرا: ' + err, 'err');

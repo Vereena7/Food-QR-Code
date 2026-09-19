@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سكانر استلام الوجبات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --ok:#059669; --ok-dark:#047857; --ok-light:#e7f8f0;
+    --warn:#d97706; --warn-dark:#b45309; --warn-light:#fff7ed;
+    --err:#dc2626; --err-dark:#b91c1c; --err-light:#fef2f2;
+    --boy:#2563eb; --girl:#e0269e;
+    --ink:#1f2937; --paper:#0f172a;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--paper); color:#fff; font-family:'Cairo',system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:14px; min-height:100%;
+  }
+  h1{font-size:18px; font-weight:800; margin:4px 0 12px; text-align:center;}
+  #camWrap{
+    width:100%; max-width:440px; aspect-ratio:1/1; border-radius:20px; overflow:hidden;
+    background:#000; position:relative; border:3px solid #334155;
+  }
+  #reader{width:100%; height:100%;}
+  #reader video{object-fit:cover;}
+
+  #resultBanner{
+    width:100%; max-width:440px; margin-top:14px; border-radius:16px; padding:16px 18px;
+    font-weight:800; font-size:17px; text-align:center; min-height:56px;
+    display:flex; align-items:center; justify-content:center; transition:background .15s;
+    background:#1e293b; color:#94a3b8;
+  }
+  #resultBanner.ok{background:var(--ok-light); color:var(--ok-dark);}
+  #resultBanner.warn{background:var(--warn-light); color:var(--warn-dark);}
+  #resultBanner.err{background:var(--err-light); color:var(--err-dark);}
+
+  #counter{margin-top:12px; font-size:13px; color:#94a3b8; font-weight:700;}
+  #setupBox{
+    width:100%; max-width:440px; margin-top:14px; background:#1e293b; border-radius:14px;
+    padding:14px 16px; font-size:13px; line-height:1.9; color:#cbd5e1; display:none;
+  }
+  #setupBox.show{display:block;}
+  #setupBox b{color:#fff;}
+  .toggle-link{margin-top:10px; font-size:12.5px; color:#64748b; cursor:pointer; text-decoration:underline;}
+</style>
+</head>
+<body>
+  <h1>🍽️ سكانر استلام الوجبات</h1>
+  <div id="camWrap"><div id="reader"></div></div>
+  <div id="resultBanner">وجّه الكاميرا على كود الشخص...</div>
+  <div id="counter">تم تسجيل 0 من بداية فتح الصفحة</div>
+  <div class="toggle-link" id="toggleSetup">إعدادات الاتصال</div>
+  <div id="setupBox">
+    <div>رابط المشروع: <b id="showUrl"></b></div>
+    <div>حالة الاتصال: <b id="pingStatus">بيتفحص...</b></div>
+  </div>
+
+<script>
+  const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzoZft-U9ZP-4OHuukMVoJz8y2D2jfQPoo4n5L5jyzTYm-RAJMcYhhHYz1JgtDO-bj2Fw/exec';
+  const SECRET = 'c09091d8b70e41149479dfa5cb769406';
+
+  const banner = document.getElementById('resultBanner');
+  const counterEl = document.getElementById('counter');
+  let successCount = 0;
+  let lastId = null, lastTime = 0;
+  let busy = false;
+
+  document.getElementById('showUrl').textContent = EXEC_URL;
+  document.getElementById('toggleSetup').addEventListener('click', () => {
+    document.getElementById('setupBox').classList.toggle('show');
+  });
+
+  function beep(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880; g.gain.value = 0.15;
+      o.start(); setTimeout(() => { o.stop(); ctx.close(); }, 140);
+    }catch(e){}
+  }
+
+  function setBanner(text, cls){
+    banner.textContent = text;
+    banner.className = cls || '';
+  }
+
+  
+  function callApi(params, cb){
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    const timeout = setTimeout(() => {
+      if (window[cbName]){ delete window[cbName]; cb({ ok:false, error:'timeout' }); cleanup(); }
+    }, 8000);
+    function cleanup(){
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){
+      clearTimeout(timeout);
+      delete window[cbName];
+      cleanup();
+      cb(data);
+    };
+    const qs = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+    const script = document.createElement('script');
+    script.src = EXEC_URL + '?' + qs + '&callback=' + cbName;
+    script.onerror = function(){
+      clearTimeout(timeout);
+      if (window[cbName]) delete window[cbName];
+      cleanup();
+      cb({ ok:false, error:'network' });
+    };
+    document.body.appendChild(script);
+  }
+
+  function checkConnection(){
+    callApi({ action:'ping', secret:SECRET }, function(res){
+      document.getElementById('pingStatus').textContent = (res && res.ok) ? '✅ متصل وكود الأمان صح' : '❌ في مشكلة اتصال أو كود الأمان غلط';
+    });
+  }
+  checkConnection();
+
+  function extractId(decodedText){
+    const m = decodedText.match(/[?&]id=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : decodedText.trim();
+  }
+
+  function onScanSuccess(decodedText){
+    const id = extractId(decodedText);
+    const now = Date.now();
+    if (busy) return;
+    if (id === lastId && (now - lastTime) < 4000) return; 
+    lastId = id; lastTime = now;
+    busy = true;
+    setBanner('⏳ بيسجّل...', '');
+    callApi({ action:'scan', id:id, secret:SECRET }, function(res){
+      busy = false;
+      if (res && res.ok){
+        if (res.alreadyDone){
+          setBanner('⚠️ ' + res.name + ' — استلم قبل كده', 'warn');
+        } else {
+          successCount++;
+          counterEl.textContent = 'تم تسجيل ' + successCount + ' من بداية فتح الصفحة';
+          setBanner('✅ ' + res.name + ' — اتسجل', 'ok');
+        }
+        beep();
+        if (navigator.vibrate) navigator.vibrate(120);
+      } else {
+        setBanner('❌ خطأ: ' + ((res && res.error) || 'غير معروف'), 'err');
+      }
+    });
+  }
+
+  const html5QrCode = new Html5Qrcode('reader');
+  Html5Qrcode.getCameras().then(function(cameras){
+    let cameraId = cameras && cameras.length ? cameras[cameras.length - 1].id : null; 
+    const config = { fps: 10, qrbox: { width: 240, height: 240 } };
+    const target = cameraId ? cameraId : { facingMode: 'environment' };
+    html5QrCode.start(target, config, onScanSuccess).catch(function(err){
+      setBanner('❌ مقدرش أفتح الكاميرا: ' + err, 'err');
+    });
+  }).catch(function(err){
+    setBanner('❌ مقدرش أوصل لكاميرات الجهاز: ' + err, 'err');
+  });
+</script>
+</body>
+</html>

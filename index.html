@@ -34,6 +34,22 @@
    
   #reader > div{border:none !important; box-shadow:none !important; background:transparent !important;}
 
+   
+  #scanGuide{
+    position:absolute; top:50%; left:50%; width:70%; height:70%;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:5;
+    border:2px dashed rgba(255,255,255,.55); border-radius:14px;
+  }
+  #scanGuide .corner{position:absolute; width:30px; height:30px; border:5px solid #22c55e;}
+  #scanGuide .corner.tl{top:-3px; left:-3px; border-right:none; border-bottom:none; border-radius:10px 0 0 0;}
+  #scanGuide .corner.tr{top:-3px; right:-3px; border-left:none; border-bottom:none; border-radius:0 10px 0 0;}
+  #scanGuide .corner.bl{bottom:-3px; left:-3px; border-right:none; border-top:none; border-radius:0 0 0 10px;}
+  #scanGuide .corner.br{bottom:-3px; right:-3px; border-left:none; border-top:none; border-radius:0 0 10px 0;}
+  #scanHint{
+    width:100%; max-width:440px; text-align:center; margin-top:8px; font-size:13px;
+    font-weight:700; color:#000;
+  }
+
   #resultBanner{
     width:100%; max-width:440px; margin-top:14px; border-radius:16px; padding:16px 18px;
     font-weight:800; font-size:17px; text-align:center; min-height:56px;
@@ -64,7 +80,11 @@
 </head>
 <body>
   <h1>🍽️ استلام الوجبات والآيس كريم</h1>
-  <div id="camWrap"><div id="reader"></div></div>
+  <div id="camWrap">
+    <div id="reader"></div>
+    <div id="scanGuide"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+  </div>
+  <div id="scanHint">🎯 حط كود الـ QR جوه المربع وثبّته لحد ما يتقرا</div>
   <div id="resultBanner">وجّه الكاميرا على كود الشخص...</div>
   <button id="nextBtn">➡️ التالي</button>
   <div id="counter">تم تسجيل 0 من بداية فتح الصفحة</div>
@@ -200,9 +220,11 @@
     
     
     
+    
+    const SCAN_BOX_RATIO = 0.7;
     const qrbox = function (viewfinderWidth, viewfinderHeight) {
       const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-      const size = Math.floor(minEdge * 0.7);
+      const size = Math.floor(minEdge * SCAN_BOX_RATIO);
       return { width: size, height: size };
     };
     const config = { fps: 10, qrbox: qrbox, videoConstraints: videoConstraints };

@@ -17,7 +17,7 @@
     --ink:#1f2937; --paper:#0f172a;
   }
   *{box-sizing:border-box;}
-  html,body{height:100%;}
+  html,body{min-height:100%;}
   body{
     margin:0; color:#fff; font-family:'Cairo',system-ui,sans-serif;
     display:flex; flex-direction:column; align-items:center; padding:14px; padding-top:36vh; min-height:100%;
@@ -26,11 +26,13 @@
   }
   h1{font-size:18px; font-weight:800; margin:10px 0 12px; text-align:center; color:#000;}
   #camWrap{
-    width:100%; max-width:440px; aspect-ratio:1/1; border-radius:20px; overflow:hidden;
-    background:#000; position:relative; border:3px solid #334155;
+    width:100%; max-width:440px; border-radius:20px; overflow:hidden;
+    background:#000; position:relative; border:3px solid #334155; flex-shrink:0;
   }
-  #reader{width:100%; height:100%;}
-  #reader video{object-fit:cover;}
+   
+  #camWrap::before{content:''; display:block; padding-top:100%;}
+  #reader{position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%;}
+  #reader video{width:100%; height:100%; object-fit:cover;}
    
   #reader > div{border:none !important; box-shadow:none !important; background:transparent !important;}
 
